@@ -4,6 +4,9 @@ import requests
 
 async def obtener_categorias(driver):
     categorias = await driver.find_element(By.CLASS_NAME, "listings__facets", timeout=60)
+    if not categorias:
+        print("No se pudo obtener ninguna categoria")
+    await driver.save_screenshot('img.png')
     groups = await categorias.find_elements(By.CLASS_NAME, "listings__facets__group") # div
     items = []
     for group in groups:
@@ -15,10 +18,12 @@ async def obtener_categorias(driver):
             title_cat = await li.find_element(By.CSS_SELECTOR, '.listings__facets__group__items__item__text')
             atributo = await title_cat.text
             link = await li.get_attribute('href')
-            llave, valor = link.split('?')[1].split('=')
-            valores[atributo] = valor            
-            item[llave] = valores
-        items.append(item)
+            if '?' in link:
+                llave, valor = link.split('?')[1].split('=')
+                valores[atributo] = valor            
+                item[llave] = valores
+        if item:
+            items.append(item)
     
     return items
 
@@ -59,37 +64,6 @@ def obtener_bus_cat(key, item):
             data = response.json()
             productos.extend(extraer_datos(data['units']))
     return productos
-
-    
-def obtener_buses(lista):
-    lista_buses = []
-    for li in lista:
-        key = list(li.keys())[0]
-        valores = li[key]
-        for item in valores:
-            print(f'scrappeando... {key}, {item}')
-            params = {
-                'apiKey': APIKEY,
-                'page': 1,
-                key: item
-            } 
-            response = requests.get(API_URL, params=params, headers=HEADERS)
-            data = response.json()
-            productos = extraer_datos(data['units'])
-            totalPag = data['statistics']['pageCount']
-            if totalPag > 1:
-                for i in range(1,totalPag):
-                    params = {
-                    'apiKey': APIKEY,
-                    'page': i + 1,
-                    key: item
-                    } 
-                    response = requests.get(API_URL, params=params, headers=HEADERS)
-                    data = response.json()
-                    productos.extend(extraer_datos(data['units']))
-            lista_buses.append(productos)
-
-    return lista_buses
 
 def chequea_params(parametro, categorias):
     for cat in categorias:
